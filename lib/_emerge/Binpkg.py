@@ -290,6 +290,24 @@ class Binpkg(CompositeTask):
             self.settings["PORTAGE_BINPKG_FILE"] = pkg_path
         self._pkg_path = pkg_path
 
+        binpkg_size_bytes = None
+        if self._pkg_path is not None and os.path.exists(self._pkg_path):
+            try:
+                binpkg_size_bytes = os.path.getsize(self._pkg_path)
+            except OSError:
+                pass
+
+        size_display_str = ""
+        if binpkg_size_bytes is not None:
+            if binpkg_size_bytes == 0:
+                size_display_str = " (0 KiB)"
+            else:
+                kib_size = binpkg_size_bytes / 1024.0
+                if kib_size == int(kib_size):
+                    size_display_str = f" ({int(kib_size)} KiB)"
+                else:
+                    size_display_str = f" ({kib_size:.1f} KiB)"
+
         logfile = self.settings.get("PORTAGE_LOG_FILE")
         if logfile is not None and os.path.isfile(logfile):
             # Remove fetch log after successful fetch.
@@ -304,17 +322,25 @@ class Binpkg(CompositeTask):
             self.wait()
             return
 
-        msg = " === ({} of {}) Merging Binary ({}::{})".format(
+        base_msg = " === ({} of {}) Merging Binary ({}::{})".format(
             pkg_count.curval,
             pkg_count.maxval,
             pkg.cpv,
             pkg_path,
         )
-        short_msg = "emerge: ({} of {}) {} Merge Binary".format(
+        msg = base_msg
+        if self.opts.verbose and size_display_str:
+            msg += size_display_str
+
+        short_msg_base = "emerge: ({} of {}) {} Merge Binary".format(
             pkg_count.curval,
             pkg_count.maxval,
             pkg.cpv,
         )
+        short_msg = short_msg_base
+        if self.opts.verbose and size_display_str:
+            short_msg += size_display_str
+
         logger.log(msg, short_msg=short_msg)
 
         phase = "clean"
