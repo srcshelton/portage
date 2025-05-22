@@ -7746,7 +7746,36 @@ class depgraph:
                         # _dep_check_composite_db, in order to prevent
                         # incorrect choices in || deps like bug #351828.
 
-                        if not self._pkg_visibility_check(pkg, autounmask_level):
+                        visible = self._pkg_visibility_check(pkg, autounmask_level)
+                        if not visible and onlydeps and parent is None:
+                            # Check raw masking reasons for 'pkg'
+                            pkgsettings = self._frozen_config.pkgsettings[pkg.root]
+                            root_config = self._frozen_config.roots[pkg.root]
+                            # Call the internal _get_masking_status to get detailed MaskReason objects
+                            # The import is: from portage.package.ebuild.getmaskingstatus import _getmaskingstatus, _MaskReason
+                            raw_mreasons_details = portage.package.ebuild.getmaskingstatus._getmaskingstatus(
+                                pkg, pkgsettings, root_config, use=self._pkg_use_enabled(pkg)
+                            )
+
+                            is_only_keyword_or_package_mask = True
+                            if not raw_mreasons_details: # Should not happen if not visible
+                                is_only_keyword_or_package_mask = False
+
+                            for reason in raw_mreasons_details:
+                                if reason.unmask_hint is None: # E.g. EAPI mask, invalid, corrupt
+                                    is_only_keyword_or_package_mask = False
+                                    break
+                                # Confirmed these keys from portage.package.ebuild.getmaskingstatus
+                                if reason.unmask_hint.key not in ("unstable keyword", "missing keyword", "p_mask"):
+                                    is_only_keyword_or_package_mask = False
+                                    break
+                            
+                            if is_only_keyword_or_package_mask:
+                                visible = True # Treat as visible for selection purposes
+                                # No need to set pkg.operation = "nomerge" here,
+                                # that will be handled by _serialize_tasks by checking pkg.onlydeps and pkg.depth.
+                        
+                        if not visible:
                             continue
 
                         # Enable upgrade or downgrade to a version
@@ -9951,6 +9980,11 @@ class depgraph:
             mygraph.difference_update(selected_nodes)
 
             for node in selected_nodes:
+                # Skip root --onlydeps packages that are not part of a cycle.
+                # If they are part of a cycle, they might need to be built.
+                if node.onlydeps and node.depth == 0 and not (cycle_digraph and node in cycle_digraph):
+                    continue
+
                 if isinstance(node, Package) and node.operation == "nomerge":
                     continue
 
