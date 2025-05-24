@@ -329,7 +329,7 @@ class Binpkg(CompositeTask):
             pkg_path,
         )
         msg = base_msg
-        if self.opts.verbose and size_display_str:
+        if getattr(self.opts, 'verbose', False) and size_display_str:
             msg += size_display_str
 
         short_msg_base = "emerge: ({} of {}) {} Merge Binary".format(
@@ -338,7 +338,7 @@ class Binpkg(CompositeTask):
             pkg.cpv,
         )
         short_msg = short_msg_base
-        if self.opts.verbose and size_display_str:
+        if getattr(self.opts, 'verbose', False) and size_display_str:
             short_msg += size_display_str
 
         logger.log(msg, short_msg=short_msg)
