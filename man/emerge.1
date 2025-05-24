@@ -1536,3 +1536,83 @@ A number of helper applications reside in \fI/usr/lib/portage/bin\fR.
 .LP
 The \fBapp\-portage/gentoolkit\fR package contains useful scripts such as
 \fBequery\fR (a package query tool).
+
+." ======================================================================
+." PENDING ACTUAL NROFF INTEGRATION BY A DEVELOPER
+." The following content is a guide for integrating documentation
+." for LOW_PRIORITY_CATEGORIES and related emerge options.
+." It needs to be properly formatted and inserted into the
+." correct sections of this man page by a developer familiar with nroff.
+." ======================================================================
+# Guide for Integrating Low-Priority Category Documentation into Man Pages
+#
+# This document provides suggestions for integrating the documentation
+# for the LOW_PRIORITY_CATEGORIES feature into the relevant Gentoo man pages.
+# The actual nroff formatting and placement should be done by a developer
+# familiar with Portage's man page conventions.
+
+## ----------------------------------------------------------------------
+## Content for make.conf(5) (LOW_PRIORITY_CATEGORIES variable)
+## ----------------------------------------------------------------------
+
+# Suggestion: This content would typically go into a section describing
+# variables that can be set in make.conf.
+
+.SH NAME 
+# (This is an example header; the variable would be listed under an appropriate existing section)
+LOW_PRIORITY_CATEGORIES - Specifies package categories to deprioritize for ambiguous short package names.
+
+.SH DESCRIPTION 
+# (This would be part of the description of variables)
+
+.TP
+.B LOW_PRIORITY_CATEGORIES
+This variable accepts a space-separated list of package category names, with the entire list enclosed in quotes. Its primary purpose is to help guide package resolution when a short, ambiguous package name (e.g., "pkgname" without a category) is provided to emerge.
+
+When such an ambiguous query matches multiple available packages, any matching packages that belong to a category listed in `LOW_PRIORITY_CATEGORIES` are considered to be of lower priority. If alternative, non-masked packages from other (normal-priority) categories are also found, these normal-priority packages will be preferred.
+
+If a normal-priority package is chosen over a low-priority one due to this setting, a warning message will inform the user about the low-priority packages that were found but not selected.
+
+This setting specifically affects the ambiguity resolution for short package names. It does **not** impact the lookup or selection of packages when a fully-qualified atom (e.g., `category/name`) is provided by the user; in such cases, the specified category is honored directly.
+
+.IP
+Example:
+.BR
+LOW_PRIORITY_CATEGORIES="games-misc acct-group app-alternatives"
+.BR
+LOW_PRIORITY_CATEGORIES='sys-kernel virtual'
+.IP
+If this variable is not set in `make.conf` (or any included files) and is not overridden by the environment variable, a system default list is used. The default list is:
+.BR
+`"acct-user acct-group app-alternatives virtual"`
+
+.TP
+.B ENVIRONMENT OVERRIDE
+The `LOW_PRIORITY_CATEGORIES` variable set in `make.conf` can be overridden by an environment variable of the same name. If the `LOW_PRIORITY_CATEGORIES` environment variable is set, its value takes precedence.
+The format for the environment variable is a space-separated list of category names; quotes are typically not used when setting the environment variable itself (e.g., `export LOW_PRIORITY_CATEGORIES="cat1 cat2"`).
+If the environment variable is set to an empty string or a string containing only whitespace, it is interpreted as an empty list of low-priority categories, effectively disabling category-based deprioritization from this source (unless overridden by the `emerge` command-line option). See also emerge(1) for the `--no-ignore-low-priority` option.
+
+.TP
+.B INTERACTION WITH MASKING
+Package masking (e.g., via `package.mask`) always takes precedence over category priority settings. Packages that are masked are excluded from selection consideration before any low-priority category filtering is applied. If all potential matches for a package name are masked, an error will be reported, regardless of their categories.
+
+## ----------------------------------------------------------------------
+## Content for emerge(1) (--no-ignore-low-priority option)
+## ----------------------------------------------------------------------
+
+# Suggestion: This content would typically go into the OPTIONS section of the emerge man page.
+
+.SH OPTIONS
+# (This is an example header; the option would be listed under the main OPTIONS section)
+
+.TP
+.B \-i, --no-ignore-low-priority
+Disables the low-priority category filtering mechanism for the current `emerge` command. 
+When this option is used, any categories defined in the `LOW_PRIORITY_CATEGORIES` variable (whether set in `/etc/portage/make.conf` or via the environment variable) will be disregarded for the scope of that `emerge` execution. 
+All unmasked packages will be treated as having normal priority during the resolution of ambiguous short package names. This effectively means that only package masking influences the initial set of candidates before an ambiguity check, and all unmasked candidates are considered equal in priority regardless of their category.
+This option provides the highest precedence in determining low-priority behavior, overriding both environment and `make.conf` settings for `LOW_PRIORITY_CATEGORIES`.
+
+---
+*Disclaimer: The nroff-style suggestions (.SH, .TP, .B, .IP, .BR) are indicative. The actual implementation should follow established conventions within the target man pages.*
+
+[end of man/emerge.1]
